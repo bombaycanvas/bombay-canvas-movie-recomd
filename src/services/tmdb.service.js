@@ -8,7 +8,7 @@ const TMDB_BASE_URL = "https://api.themoviedb.org/3";
  * genre: TMDB genre id (number)
  * language: en, hi, etc.
  */
-async function discoverContent({ type, genre, language }) {
+async function discoverContent({ type, genreId, language }) {
   try {
     let endpoint = "movie";
 
@@ -20,7 +20,8 @@ async function discoverContent({ type, genre, language }) {
       {
         params: {
           api_key: process.env.TMDB_API_KEY,
-          with_genres: genre,
+          // with_genres: genreId,
+          with_genres: genreId?.join(","),
           language: language,
           sort_by: "popularity.desc",
           with_original_language: type === "anime" ? "ja" : undefined,

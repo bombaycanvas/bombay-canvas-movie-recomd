@@ -26,7 +26,14 @@ async function recommend(req, res) {
       return res.status(400).json({ error: "Genre and language are required" });
     }
 
-    const genreId = GENRE_MAP[genre.toLowerCase()];
+    if (!genre || !Array.isArray(genre) || genres.length === 0) {
+  return res.status(400).json({ error: "Genres are required" });
+}
+
+    // const genreId = GENRE_MAP[genre.toLowerCase()];
+    const genreId = genre
+  .map((g) => GENRE_MAP[g.toLowerCase()])
+  .filter(Boolean);
     const languageCode = LANGUAGE_MAP[language.toLowerCase()];
 
     if (!genreId || !languageCode) {
