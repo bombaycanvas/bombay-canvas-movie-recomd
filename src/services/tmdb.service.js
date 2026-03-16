@@ -9,6 +9,11 @@ async function discoverContent({ type, genreIds, language, page = 1 }) {
     const endpoint = type === "movie" ? "movie" : "tv";
     const isAnime = type === "anime";
 
+    const genreMapKey = isAnime ? "tv" : type;
+    const genreIds = genreNames
+      .map(g => GENRE_MAP[genreMapKey]?.[g.toLowerCase()])
+      .filter(Boolean);
+
     const response = await axios.get(
       `${TMDB_BASE_URL}/discover/${endpoint}`,
       {

@@ -34,15 +34,24 @@ async function recommend(req, res) {
     if (!language) {
       return res.status(400).json({ error: "Language is required" });
     }
+     
 
+    // Just validate that the genre names exist in either map
+const validGenres = genre.filter(g =>
+  GENRE_MAP.movie[g.toLowerCase()] || GENRE_MAP.tv[g.toLowerCase()]
+);
+
+if (validGenres.length === 0) {
+  return res.status(400).json({ error: "No valid genres provided" });
+}
     
-    const genreIds = genre
-      .map((g) => GENRE_MAP[g.toLowerCase()])
-      .filter(Boolean);
+    // const genreIds = genre
+    //   .map((g) => GENRE_MAP[g.toLowerCase()])
+    //   .filter(Boolean);
 
-    if (genreIds.length === 0) {
-      return res.status(400).json({ error: "No valid genres provided" });
-    }
+    // if (genreIds.length === 0) {
+    //   return res.status(400).json({ error: "No valid genres provided" });
+    // }
 
     const languageCode = LANGUAGE_MAP[language.toLowerCase()];
 
@@ -81,7 +90,7 @@ async function recommend(req, res) {
 
     const [internalShows, ...externalResults] = await Promise.all([
   fetchInternalShows(),
-  ...types.map(type => discoverContent({ type, genreIds, language: languageCode, page }))
+  ...types.map(type => discoverContent({ type, genreNames: genre, language: languageCode, page }))
 ]);
 
 console.log("Raw results per type:", externalResults.map(r => r.length));
