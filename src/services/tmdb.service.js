@@ -22,7 +22,7 @@ async function discoverContent({ type, genreIds, language, page = 1 }) {
           language,
 
           
-          with_original_language: isAnime ? "ja" : undefined,
+          with_original_language: isAnime ? "ja" : language,
 
           sort_by: "popularity.desc",
           page,

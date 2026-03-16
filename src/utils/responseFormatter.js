@@ -3,7 +3,7 @@ function formatContent(item) {
     id: item.id,
 
     // Titles
-    title: item.title || item.name || "Untitled",
+    title: item.title || item.name,
     originalTitle: item.original_title || item.original_name,
     watchProviders: item.watchProviders || null,
     trailer: item.trailerUrl || null,
