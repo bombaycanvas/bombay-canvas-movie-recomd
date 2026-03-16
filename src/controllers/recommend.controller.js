@@ -84,8 +84,12 @@ async function recommend(req, res) {
   ...types.map(type => discoverContent({ type, genreIds, language: languageCode, page }))
 ]);
 
+console.log("Raw results per type:", externalResults.map(r => r.length));
+console.log("Sample TV item:", externalResults[0]?.[0]);
+
 let externalContent = externalResults.flat();
 
+console.log("Total before filter:", externalContent.length);
     /* ---------------- SCORE + RANK EXTERNAL CONTENT ONLY ---------------- */
 
     const rankedExternal = externalContent
