@@ -2,16 +2,23 @@ const axios = require("axios");
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
-
+const { GENRE_MAP, TV_GENRE_OVERRIDE } = require("../utils/mappings");
 async function discoverContent({ type, genreIds, language, page = 1 }) {
   try {
     
     const endpoint = type === "movie" ? "movie" : "tv";
     const isAnime = type === "anime";
+    const isTv = type === "tv" || isAnime;
 
-    const genreMapKey = isAnime ? "tv" : type;
+    // const genreMapKey = isAnime ? "tv" : type;
     const genreIds = genreNames
-      .map(g => GENRE_MAP[genreMapKey]?.[g.toLowerCase()])
+      .map(g => {
+        const key = g.toLowerCase();
+        // Use TV override if it exists for this genre, otherwise fall back to base map
+        return isTv
+          ? (TV_GENRE_OVERRIDE[key] ?? GENRE_MAP[key])
+          : GENRE_MAP[key];
+      })
       .filter(Boolean);
 
     const response = await axios.get(

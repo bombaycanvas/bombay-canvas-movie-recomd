@@ -37,9 +37,7 @@ async function recommend(req, res) {
      
 
     // Just validate that the genre names exist in either map
-const validGenres = genre.filter(g =>
-  GENRE_MAP.movie[g.toLowerCase()] || GENRE_MAP.tv[g.toLowerCase()]
-);
+const validGenres = genre.filter(g => GENRE_MAP[g.toLowerCase()]);
 
 if (validGenres.length === 0) {
   return res.status(400).json({ error: "No valid genres provided" });
