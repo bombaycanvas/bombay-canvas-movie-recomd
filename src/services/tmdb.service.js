@@ -3,7 +3,7 @@ const axios = require("axios");
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
 const { GENRE_MAP, TV_GENRE_OVERRIDE } = require("../utils/mappings");
-async function discoverContent({ type, genreIds, language, page = 1 }) {
+async function discoverContent({ type, genreNames, language, page = 1 }) {
   try {
     
     const endpoint = type === "movie" ? "movie" : "tv";
