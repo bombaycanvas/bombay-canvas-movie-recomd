@@ -139,15 +139,6 @@ console.log("Total before filter:", externalContent.length);
       .map(formatContent);
 
     return res.json({
-      debug: {
-    genresReceived: genre,
-    genreIdsMapped: genreId,
-    language: languageCode,
-    totalTMDBResults: externalContent.length,
-    totalInternalShows: internalShows.length,
-    totalMixed: mixed.length
-  },
-
       page,
       limit,
       hasMore: end < mixed.length,
