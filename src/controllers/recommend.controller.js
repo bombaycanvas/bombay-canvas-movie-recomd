@@ -1,8 +1,12 @@
-const { discoverContent, fetchInternalShows  } = require("../services/tmdb.service");
+
+const { discoverContent, fetchInternalShows } = require("../services/tmdb.service");
 const { calculateScore } = require("../services/scoring.service");
-const { GENRE_MAP, LANGUAGE_MAP } = require("../utils/mappings");
+const { GENRE_MAP, LANGUAGE_MAP, VALID_MOODS } = require("../utils/mappings");
 const { formatContent } = require("../utils/responseFormatter");
 const { getUserStats } = require("../services/userStats.service");
+
+
+const INTERNAL_INJECT_EVERY = 3;
 
 async function recommend(req, res) {
   try {
@@ -22,97 +26,95 @@ async function recommend(req, res) {
       return res.status(400).json({ error: "Invalid userId or types" });
     }
 
-    if (!genre || !language) {
-      return res.status(400).json({ error: "Genre and language are required" });
+    
+    if (!genre || !Array.isArray(genre) || genre.length === 0) {
+      return res.status(400).json({ error: "Genres must be a non-empty array" });
     }
 
-    if (!genre || !Array.isArray(genre) || genre.length === 0) {
-  return res.status(400).json({ error: "Genres are required" });
-}
+    if (!language) {
+      return res.status(400).json({ error: "Language is required" });
+    }
 
-    // const genreId = GENRE_MAP[genre.toLowerCase()];
-    const genreId = genre
-  .map((g) => GENRE_MAP[g.toLowerCase()])
-  .filter(Boolean);
+    
+    const genreIds = genre
+      .map((g) => GENRE_MAP[g.toLowerCase()])
+      .filter(Boolean);
+
+    if (genreIds.length === 0) {
+      return res.status(400).json({ error: "No valid genres provided" });
+    }
+
     const languageCode = LANGUAGE_MAP[language.toLowerCase()];
 
-    if (!genreId || !languageCode) {
-      return res.status(400).json({ error: "Invalid genre or language" });
+    if (!languageCode) {
+      return res.status(400).json({ error: "Invalid language" });
+    }
+
+    
+    if (mood && VALID_MOODS && !VALID_MOODS.includes(mood.toLowerCase())) {
+      return res.status(400).json({ error: `Invalid mood. Valid options: ${VALID_MOODS.join(", ")}` });
     }
 
     /* ---------------- USER BEHAVIOR ---------------- */
 
     const userStats = await getUserStats(userId);
 
-    /* ---------------- FETCH CONTENT ---------------- */
-     /* ---------------- FETCH CONTENT ---------------- */
+    /* ---------------- FETCH EXTERNAL (TMDB) CONTENT ---------------- */
 
-let allContent = [];
-
-// 🔹 1. Fetch TMDB content
-for (const type of types) {
-  const content = await discoverContent({
-    type,
-    genre: genreId,
-    language: languageCode,
-  });
-
-  // mark as external
-  allContent.push(
-    ...content.map(item => ({
-      ...item,
-      is_internal: false
-    }))
-  );
-}
-
-// 🔹 2. Fetch Bombay Canvas internal shows
-const internalShows = await fetchInternalShows();
-
-// Optional: filter internal shows by language
-// const filteredInternal = internalShows.filter(
-//   show => show.original_language === languageCode
-// );
-
-// Add to content pool
-allContent.push(...internalShows);
     
+    let externalContent = [];
 
-    /* ---------------- FILTER + SCORE ---------------- */
+    for (const type of types) {
+      const content = await discoverContent({
+        type,
+        genre: genreIds,
+        language: languageCode,
+      });
 
-    const rankedContent = allContent
-      .map((item) => {
-        // 🔥 HARD LANGUAGE FILTER (IMPORTANT FIX)
-        // if (item.original_language !== languageCode) return null;
+      externalContent.push(...content);
+    }
 
-        const score = calculateScore(
+    
+    externalContent = externalContent.filter(
+      (item) => item.original_language === languageCode
+    );
+
+    /* ---------------- SCORE + RANK EXTERNAL CONTENT ONLY ---------------- */
+
+    const rankedExternal = externalContent
+      .map((item) => ({
+        ...item,
+        is_internal: false,
+        score: calculateScore(
           item,
-          { language: languageCode, mood },
+          { language: languageCode, mood: mood?.toLowerCase() ?? null },
           userStats
-        );
-
-        return { ...item, score };
-      })
-      .filter(Boolean) // remove nulls
+        ),
+      }))
       .sort((a, b) => b.score - a.score);
 
-    /* ---------------- PAGINATION ---------------- */
-    /* ---------------- INTERLEAVE INTERNAL + TMDB ---------------- */
+    /* ---------------- FETCH INTERNAL SHOWS (PROMOTIONAL) ---------------- */
 
-    const internal = rankedContent.filter(i => i.is_internal);
-    const external = rankedContent.filter(i => !i.is_internal);
+    
+    const internalShows = await fetchInternalShows();
+
+    const internalPool = internalShows.map((show) => ({
+      ...show,
+      is_internal: true,
+    }));
+
+    /* ---------------- INTERLEAVE: inject 1 internal every N external ---------------- */
 
     const mixed = [];
+    let internalIndex = 0;
 
-    while (internal.length || external.length) {
-      // Add 2 external (TMDB)
-      for (let i = 0; i < 3 && external.length; i++) {
-        mixed.push(external.shift());
-      }
+    for (let i = 0; i < rankedExternal.length; i++) {
+      mixed.push(rankedExternal[i]);
 
-      // Add 1 internal
-      if (internal.length) {
-        mixed.push(internal.shift());
+      
+      if ((i + 1) % INTERNAL_INJECT_EVERY === 0 && internalPool.length > 0) {
+        mixed.push(internalPool[internalIndex % internalPool.length]);
+        internalIndex++;
       }
     }
 
@@ -129,6 +131,7 @@ allContent.push(...internalShows);
       page,
       limit,
       hasMore: end < mixed.length,
+      total: mixed.length,
       data: paginatedData,
     });
 
