@@ -26,7 +26,7 @@ async function recommend(req, res) {
       return res.status(400).json({ error: "Genre and language are required" });
     }
 
-    if (!genre || !Array.isArray(genre) || genres.length === 0) {
+    if (!genre || !Array.isArray(genre) || genre.length === 0) {
   return res.status(400).json({ error: "Genres are required" });
 }
 
