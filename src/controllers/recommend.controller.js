@@ -84,9 +84,7 @@ async function recommend(req, res) {
   ...types.map(type => discoverContent({ type, genreIds, language: languageCode, page }))
 ]);
 
-let externalContent = externalResults.flat().filter(
-  (item) => item.original_language === languageCode
-);
+let externalContent = externalResults.flat();
 
     /* ---------------- SCORE + RANK EXTERNAL CONTENT ONLY ---------------- */
 
