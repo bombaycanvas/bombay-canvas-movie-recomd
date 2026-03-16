@@ -62,22 +62,31 @@ async function recommend(req, res) {
     /* ---------------- FETCH EXTERNAL (TMDB) CONTENT ---------------- */
 
     
-    let externalContent = [];
+    // let externalContent = [];
 
-    for (const type of types) {
-      const content = await discoverContent({
-        type,
-        genre: genreIds,
-        language: languageCode,
-      });
+    // for (const type of types) {
+    //   const content = await discoverContent({
+    //     type,
+    //     genre: genreIds,
+    //     language: languageCode,
+    //   });
 
-      externalContent.push(...content);
-    }
+    //   externalContent.push(...content);
+    // }
 
     
-    externalContent = externalContent.filter(
-      (item) => item.original_language === languageCode
-    );
+    // externalContent = externalContent.filter(
+    //   (item) => item.original_language === languageCode
+    // );
+
+    const [internalShows, ...externalResults] = await Promise.all([
+  fetchInternalShows(),
+  ...types.map(type => discoverContent({ type, genreIds, language: languageCode, page }))
+]);
+
+let externalContent = externalResults.flat().filter(
+  (item) => item.original_language === languageCode
+);
 
     /* ---------------- SCORE + RANK EXTERNAL CONTENT ONLY ---------------- */
 
@@ -96,7 +105,7 @@ async function recommend(req, res) {
     /* ---------------- FETCH INTERNAL SHOWS (PROMOTIONAL) ---------------- */
 
     
-    const internalShows = await fetchInternalShows();
+    // const internalShows = await fetchInternalShows();
 
     const internalPool = internalShows.map((show) => ({
       ...show,
