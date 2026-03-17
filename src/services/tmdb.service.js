@@ -2,8 +2,24 @@ const axios = require("axios");
 
 const TMDB_BASE_URL = "https://api.themoviedb.org/3";
 
+const tmdbCache = new Map();
+const TMDB_CACHE_TTL = 10 * 60 * 1000;
+
 const { GENRE_MAP, TV_GENRE_OVERRIDE } = require("../utils/mappings");
+
 async function discoverContent({ type, genreNames, language, page = 1 }) {
+  
+  // Build a cache key from the exact params
+  const cacheKey = `${type}-${genreNames.join(",")}-${language}-${page}`;
+  const cached = tmdbCache.get(cacheKey);
+
+  if (cached && (Date.now() - cached.fetchedAt) < TMDB_CACHE_TTL) {
+    console.log("TMDB cache hit:", cacheKey);
+    return cached.data;
+  }
+  
+  
+  
   try {
     
     const endpoint = type === "movie" ? "movie" : "tv";
@@ -42,10 +58,20 @@ async function discoverContent({ type, genreNames, language, page = 1 }) {
       }
     );
 
-    return response.data.results.map((item) => ({
+    // return response.data.results.map((item) => ({
+    //   ...item,
+    //   _contentType: type, 
+    // }));
+
+    const results = response.data.results.map(item => ({
       ...item,
-      _contentType: type, 
+      _contentType: type,
     }));
+
+    // Store in cache
+    tmdbCache.set(cacheKey, { data: results, fetchedAt: Date.now() });
+
+    return results;
 
   } catch (error) {
     console.error(`TMDB discoverContent error [${type}]:`, error.message);
